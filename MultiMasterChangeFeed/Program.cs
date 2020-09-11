@@ -10,6 +10,8 @@ namespace MultiMasterChangeFeed
 {
     class Program
     {
+        private static string RandomId => new Random().Next().ToString();
+
         static async Task Main(string[] _)
         {
             var cosmosConfiguration = new ConfigurationBuilder()
@@ -24,39 +26,27 @@ namespace MultiMasterChangeFeed
             var container = cosmosConfiguration["Container"];
             var leasesContainer = cosmosConfiguration["LeasesContainer"];
 
-            var europeClient = new CosmosClientBuilder(endpoint, authKey).WithApplicationRegion(Regions.NorthEurope).Build();
-            var australiaClient = new CosmosClientBuilder(endpoint, authKey).WithApplicationRegion(Regions.AustraliaSoutheast).Build();
+            var clientBuilder = new CosmosClientBuilder(endpoint, authKey);
 
-            var europeContainer = europeClient.GetDatabase(database).GetContainer(container);
-            var australiaContainer = australiaClient.GetDatabase(database).GetContainer(container);
+            var region1 = new Region(Regions.WestUS, clientBuilder, database, container, leasesContainer);
+            var region2 = new Region(Regions.AustraliaSoutheast, clientBuilder, database, container, leasesContainer);
 
+            await region1.Start();
+            await region2.Start();
 
-            // ChangeFeed Processor
-            var europeLeaseContainer = europeClient.GetContainer(database, leasesContainer);
-            await europeClient.GetContainer(database, container)
-                .GetChangeFeedProcessorBuilder<Item>(nameof(HandleChangesAsync), HandleChangesAsync)
-                    .WithInstanceName(nameof(Program))
-                    .WithLeaseContainer(europeLeaseContainer)
-                    .Build()
-                    .StartAsync();
+            NonBlockingConsole.WriteLine($"Initialization finished at {DateTime.UtcNow:hh:mm:ss.ffffff}");
 
-            var australiaLeaseContainer = europeClient.GetContainer(database, leasesContainer);
-            await europeClient.GetContainer(database, container)
-                .GetChangeFeedProcessorBuilder<Item>(nameof(HandleChangesAsync), HandleChangesAsync)
-                    .WithInstanceName(nameof(Program))
-                    .WithLeaseContainer(australiaLeaseContainer)
-                    .Build()
-                    .StartAsync();
-        }
+            var id = RandomId;
 
-        static async Task HandleChangesAsync(IReadOnlyCollection<Item> changes, CancellationToken cancellationToken)
-        {
-            foreach (Item item in changes)
-            {
-                Console.WriteLine($"Detected operation for item with id {item.Id}, created at {item._ts}.");
-            }
+            await Task.WhenAll(
+                Task.Run(async () => await region1.Add(id)),
+                Task.Run(async () => await region2.Add(id))
+                );
 
-            await Task.CompletedTask;
+            var written = await region1.Get(id);
+            NonBlockingConsole.WriteLine($"Region {written.Region} won");
+
+            Console.ReadKey();
         }
     }
 }
