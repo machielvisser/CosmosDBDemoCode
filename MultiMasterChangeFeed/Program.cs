@@ -77,7 +77,7 @@ namespace MultiMasterChangeFeed
                 if (conflictResolved)
                 {
                     var timeDiff = (DateTime.UtcNow - new DateTime(Math.Min(region1Result.InsertionTimestamp.Ticks, region2Result.InsertionTimestamp.Ticks))).TotalMilliseconds;
-                    NonBlockingConsole.WriteLine($"Region {region1Result.Region} won within {timeDiff}ms");
+                    NonBlockingConsole.WriteLine($"Region {region1Result.Region} won within {timeDiff}ms at {DateTime.UtcNow:hh:mm:ss.ffffff}");
                 }
             }
             while (!conflictResolved);
