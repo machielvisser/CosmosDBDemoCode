@@ -10,11 +10,7 @@ namespace MultiMasterChangeFeed
 
         static NonBlockingConsole()
         {
-            new Thread(
-              () =>
-              {
-                  while (true) Console.WriteLine(m_Queue.Take());
-              })
+            new Thread(() => { do Console.WriteLine(m_Queue.Take()); while (true); })
             {
                 IsBackground = true
             }

@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 using System;
 
 namespace MultiMasterChangeFeed
@@ -11,8 +12,9 @@ namespace MultiMasterChangeFeed
         [JsonProperty("partition")]
         public string Partition { get; set; }
 
+        [JsonConverter(typeof(UnixDateTimeConverter))]
         [JsonProperty("_ts")]
-        public string InsertionTimestamp { get; set; }
+        public DateTime InsertionTimestamp { get; set; } = DateTime.UnixEpoch;
         
         [JsonProperty("region")]
         public string Region { get; set; }

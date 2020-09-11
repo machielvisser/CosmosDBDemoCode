@@ -1,6 +1,7 @@
 ﻿using Microsoft.Azure.Cosmos;
 using Microsoft.Azure.Cosmos.Fluent;
 using Microsoft.Azure.Cosmos.Linq;
+using Newtonsoft.Json.Converters;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -81,7 +82,7 @@ namespace MultiMasterChangeFeed
         async Task HandleChangesAsync(IReadOnlyCollection<Item> changes, CancellationToken cancellationToken)
         {
             foreach (Item item in changes)
-                NonBlockingConsole.WriteLine($"Change of {item.Id}, created at {DateTime.Parse(item.InsertionTimestamp):hh:mm:ss.fff}, in region {_region}");
+                NonBlockingConsole.WriteLine($"Change of {item.Id}, created at {item.InsertionTimestamp:hh:mm:ss.fff}, in region {item.Region}, reported by region {_region}");
 
             await Task.CompletedTask;
         }
