@@ -3,6 +3,7 @@ using Microsoft.Azure.Cosmos.Fluent;
 using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -28,25 +29,44 @@ namespace MultiMasterChangeFeed
 
             var clientBuilder = new CosmosClientBuilder(endpoint, authKey);
 
-            var region1 = new Region(Regions.WestUS, clientBuilder, database, container, leasesContainer);
-            var region2 = new Region(Regions.AustraliaSoutheast, clientBuilder, database, container, leasesContainer);
+            var accountRegion = new Region(Regions.NorthEurope, clientBuilder, database, container, leasesContainer);
+            var secondRegion = new Region(Regions.AustraliaSoutheast, clientBuilder, database, container, leasesContainer);
 
-            await region1.Start();
-            await region2.Start();
+            await Task.WhenAll(
+                    accountRegion.Start(),
+                    secondRegion.Start()
+                    );
 
             NonBlockingConsole.WriteLine($"Initialization finished at {DateTime.UtcNow:hh:mm:ss.ffffff}");
 
-            var id = RandomId;
+            await SimulateConflictResolution(accountRegion, secondRegion);
 
-            await Task.WhenAll(
-                Task.Run(async () => await region1.Add(id)),
-                Task.Run(async () => await region2.Add(id))
-                );
+            Console.ReadKey();
+        }
+
+        private static async Task SimulateConflictResolution(Region region1, Region region2)
+        {
+            var id = RandomId;
+            var success = false;
+
+            // Sometimes one write is finished before the other reaches the database, 
+            // resulting in a client conflict instead of a server conflict
+            // Repeat till the two writes have resulted in server side conflict resolution
+            do
+            {
+                id = RandomId;
+
+                var result = await Task.WhenAll(
+                    region1.Add(id),
+                    region2.Add(id)
+                    );
+
+                success = result.All(x => x);
+            }
+            while (!success);
 
             var written = await region1.Get(id);
             NonBlockingConsole.WriteLine($"Region {written.Region} won");
-
-            Console.ReadKey();
         }
     }
 }

@@ -1,7 +1,9 @@
 ﻿using Microsoft.Azure.Cosmos;
 using Microsoft.Azure.Cosmos.Fluent;
+using Microsoft.Azure.Cosmos.Linq;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -10,6 +12,7 @@ namespace MultiMasterChangeFeed
     public class Region
     {
         private readonly string _region;
+        private readonly CosmosClient _client;
         private readonly Container _container;
         private readonly ChangeFeedProcessor _changeFeedProcessor;
 
@@ -17,18 +20,18 @@ namespace MultiMasterChangeFeed
         {
             _region = region;
 
-            var client = cosmosClientBuilder
+            _client = cosmosClientBuilder
                 .WithConnectionModeDirect()
                 .WithApplicationRegion(region)
                 .WithConsistencyLevel(ConsistencyLevel.Eventual)
                 .Build();
 
-            NonBlockingConsole.WriteLine($"Connecting to {client.Endpoint.AbsoluteUri} ({region})");
+            NonBlockingConsole.WriteLine($"Connecting to {_client.Endpoint.AbsoluteUri} ({region})");
 
-            _container = client.GetDatabase(database).GetContainer(container);
+            _container = _client.GetDatabase(database).GetContainer(container);
 
-            var leases = client.GetContainer(database, leasesContainer);
-            _changeFeedProcessor = client
+            var leases = _client.GetContainer(database, leasesContainer);
+            _changeFeedProcessor = _client
                 .GetContainer(database, container)
                 .GetChangeFeedProcessorBuilder<Item>(_region, HandleChangesAsync)
                 .WithInstanceName(_region)
@@ -38,10 +41,13 @@ namespace MultiMasterChangeFeed
 
         public async Task Start()
         {
+            // Warmup of the connection
+            await _container.GetItemLinqQueryable<Item>().ToFeedIterator().ReadNextAsync();
+
             await _changeFeedProcessor.StartAsync();
         }
 
-        public async Task Add(string id)
+        public async Task<bool> Add(string id)
         {
             NonBlockingConsole.WriteLine($"Adding item {id} at {DateTime.UtcNow:hh:mm:ss.ffffff} in region {_region}");
             try
@@ -61,8 +67,10 @@ namespace MultiMasterChangeFeed
             catch (CosmosException e)
             {
                 NonBlockingConsole.WriteLine($"Exception in {_region}: {e.Message}");
+                return false;
             }
             NonBlockingConsole.WriteLine($"Added item {id} at {DateTime.UtcNow:hh:mm:ss.ffffff} in region {_region}");
+            return true;
         }
 
         public async Task<Item> Get(string id)
