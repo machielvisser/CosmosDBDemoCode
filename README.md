@@ -9,12 +9,12 @@ The received changes from the change feed are logged.
 ```
 Connecting to https://mvcosmosdemo.documents.azure.com/ (North Europe)
 Connecting to https://mvcosmosdemo.documents.azure.com/ (Australia Southeast)
-Initialization finished at 12:27:51.187410
-Adding item 2092177417 at 12:27:51.190810 in region North Europe
-Adding item 2092177417 at 12:27:51.220290 in region Australia Southeast
-Added item 2092177417 at 12:27:51.299823 in region North Europe
-Added item 2092177417 at 12:27:51.505110 in region Australia Southeast
-Region Australia Southeast won within 1689.2438ms
-Change of 2092177417, created at 12:27:51.000000, in region Australia Southeast, reported by region North Europe
-Change of 2092177417, created at 12:27:51.000000, in region Australia Southeast, reported by region Australia Southeast
+Initialization finished at 12:38:13.773917
+Adding item 1963543886 at 12:38:13.777174 in region North Europe
+Adding item 1963543886 at 12:38:13.805347 in region Australia Southeast
+Added item 1963543886 at 12:38:13.881753 in region North Europe
+Added item 1963543886 at 12:38:14.098053 in region Australia Southeast
+Region Australia Southeast won within 461.3721ms at 12:38:14.461377
+Change of 1963543886, created at 12:38:14.000000, in region Australia Southeast, reported by region North Europe at 12:38:18.880889
+Change of 1963543886, created at 12:38:14.000000, in region Australia Southeast, reported by region Australia Southeast at 12:38:19.330700
 ```
