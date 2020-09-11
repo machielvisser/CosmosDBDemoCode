@@ -65,8 +65,22 @@ namespace MultiMasterChangeFeed
             }
             while (!success);
 
-            var written = await region1.Get(id);
-            NonBlockingConsole.WriteLine($"Region {written.Region} won");
+            // Monitor the regions till the conflict is resolved
+            var conflictResolved = false;
+            do
+            {
+                var region1Result = await region1.Get(id);
+                var region2Result = await region2.Get(id);
+
+                conflictResolved = region1Result.Region.Equals(region2Result.Region);
+
+                if (conflictResolved)
+                {
+                    var timeDiff = (DateTime.UtcNow - new DateTime(Math.Min(region1Result.InsertionTimestamp.Ticks, region2Result.InsertionTimestamp.Ticks))).TotalMilliseconds;
+                    NonBlockingConsole.WriteLine($"Region {region1Result.Region} won within {timeDiff}ms");
+                }
+            }
+            while (!conflictResolved);
         }
     }
 }
