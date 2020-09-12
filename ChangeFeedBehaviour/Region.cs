@@ -3,6 +3,7 @@ using Microsoft.Azure.Cosmos.Fluent;
 using Microsoft.Azure.Cosmos.Linq;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -35,6 +36,7 @@ namespace MultiMasterChangeFeed
                 .GetChangeFeedProcessorBuilder<Item>(_region, HandleChangesAsync)
                 .WithInstanceName(_region)
                 .WithLeaseContainer(leases)
+                .WithStartTime(DateTime.UtcNow)
                 .Build();
         }
 
@@ -46,12 +48,19 @@ namespace MultiMasterChangeFeed
             await _changeFeedProcessor.StartAsync();
         }
 
-        public async Task<bool> Add(string id)
+        public async Task<bool> IsMultiMaster()
+        {
+            var accountProperties = await _client.ReadAccountAsync();
+
+            return accountProperties.WritableRegions.Count() > 1;
+        }
+
+        public async Task<Item> Add(string id)
         {
             NonBlockingConsole.WriteLine($"Adding item {id} at {DateTime.UtcNow:hh:mm:ss.ffffff} in region {_region}");
             try
             {
-                await _container.CreateItemAsync(
+                var result = await _container.CreateItemAsync(
                     new Item
                     {
                         Id = id,
@@ -62,14 +71,22 @@ namespace MultiMasterChangeFeed
                     {
                         ConsistencyLevel = ConsistencyLevel.Eventual,
                     });
+
+                NonBlockingConsole.WriteLine($"Added item {id} at {DateTime.UtcNow:hh:mm:ss.ffffff} in region {_region}");
+                return result.Resource;
             }
             catch (CosmosException e)
             {
                 NonBlockingConsole.WriteLine($"Exception in {_region}: {e.Message}");
-                return false;
+                return null;
             }
-            NonBlockingConsole.WriteLine($"Added item {id} at {DateTime.UtcNow:hh:mm:ss.ffffff} in region {_region}");
-            return true;
+        }
+
+        public async Task<bool> Exists(string id)
+        {
+            var response = await _container.GetItemLinqQueryable<Item>().Where(item => item.Id.Equals(id)).CountAsync();
+
+            return response.Resource > 0;
         }
 
         public async Task<Item> Get(string id)
