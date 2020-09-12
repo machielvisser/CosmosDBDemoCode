@@ -38,30 +38,28 @@ namespace MultiMasterChangeFeed
 
             var methods = new[] { nameof(MultiRegionChangeFeedTrigger), nameof(ServerSideConflictResolution) };
 
-            do
+            Console.WriteLine($"Choose a Method: {string.Join(", ", methods.Select((method, index) => $"{index}: {method}"))} (Default: 0)");
+            var input = Console.ReadKey();
+            try
             {
-                Console.WriteLine($"Choose a Method: {string.Join(", ", methods.Select((method, index) => $"{index}: {method}"))} (Default: 0)");
-                var input = Console.ReadKey();
-                try
+                if (int.TryParse(input.KeyChar.ToString(), out int choice))
                 {
-                    if (int.TryParse(input.KeyChar.ToString(), out int choice))
-                    {
-                        Console.WriteLine($"Starting: {methods[choice]}");
+                    Console.WriteLine($"Starting: {methods[choice]}");
 
-                        var task = choice switch
-                        {
-                            1 => MultiRegionChangeFeedTrigger(regions),
-                            _ => ServerSideConflictResolution(regions)
-                        };
-                        await task;
-                    }
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine(e.Message);
+                    var task = choice switch
+                    {
+                        1 => ServerSideConflictResolution(regions),
+                        _ => MultiRegionChangeFeedTrigger(regions)
+                    };
+                    await task;
                 }
             }
-            while (true);
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+            }
+
+            Console.ReadKey();
         }
 
         private static async Task MultiRegionChangeFeedTrigger(IEnumerable<Region> regions)
